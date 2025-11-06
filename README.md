@@ -5,5 +5,5 @@ Projekt serwisu filmowego pozwalającego na przeglądanie filmów oraz dodawanie
 - CRUD filmów, reżyserów, gatunków
 - wyszukiwanie filmów z użyciem filtrów
 - dodawanie do listy obejrzanych
-- moderowanie wystawianymi ocen i recenzji
+- moderowanie wystawianymi ocenami i recenzjami
 - obserwowanie innych użytkowników
