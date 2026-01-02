@@ -9,27 +9,28 @@ class IFilmService(ABC):
     async def get_all_films(self) -> Iterable[Film]:
         """Abstract for getting all films.
         Returns:
-            Iterable[Film]: Films in database."""
+            Iterable[Film]: Films from repository."""
 
     @abstractmethod
-    async def get_films_by_title(self, title: str) -> Iterable[Film]:
-        """Abstract for getting films by a part of their title.
+    async def search_films(
+            self,
+            title: str | None = None,
+            genre_ids: list[int] | None = None,
+            director_name: str | None = None,
+            year: int | None = None,
+    ) -> Iterable[Any]:
+        """The abstract for searching a film from the repository with various filters.
         Args:
-            title (str): Part of the film's title.
+            title (str): Part of film's title.
+            genre_ids (list[int]): Film's genres.
+            director_name (str): Name of the film's director.
+            year (int): Release year.
         Returns:
-            Iterable[Film]: Films in database."""
-
-    @abstractmethod
-    async def get_films_by_genres(self, genres: Iterable[int]) -> Iterable[Film]:
-        """The abstract for getting a film by its genres.
-        Args:
-            genres (Iterable[str]): Genres' IDs.
-        Returns:
-            Iterable[Film]: Films in database."""
+            Iterable[Any]: List of films that match the criteria."""
 
     @abstractmethod
     async def get_film_by_id(self, film_id: int) -> Film | None:
-        """The abstract for getting a film by its id.
+        """The abstract for getting a film from the repository by its id.
         Args:
             film_id (int): Film's id.
         Returns:

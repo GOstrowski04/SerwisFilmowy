@@ -1,9 +1,10 @@
-
+"""A module providing database access."""
 
 import asyncio
 
 import databases
 import sqlalchemy
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.exc import OperationalError, DatabaseError
 from sqlalchemy.ext.asyncio import create_async_engine
 from asyncpg.exceptions import ( # type: ignore
@@ -51,6 +52,19 @@ film_genre_table = sqlalchemy.Table(
         primary_key=True),
     sqlalchemy.Column("genre_id", sqlalchemy.Integer, sqlalchemy.ForeignKey("genres.id"),
                       primary_key=True),
+)
+
+user_table = sqlalchemy.Table(
+    "users",
+    metadata,
+    sqlalchemy.Column(
+        "id",
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=sqlalchemy.text("gen_random_uuid()"),
+    ),
+    sqlalchemy.Column("email", sqlalchemy.String, unique=True),
+    sqlalchemy.Column("password", sqlalchemy.String),
 )
 
 db_uri = (

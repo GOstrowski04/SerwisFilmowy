@@ -3,7 +3,7 @@
 from typing import Iterable
 
 from dependency_injector.wiring import inject, Provide
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from filmapi.container import Container
 from filmapi.domain.film import Film, FilmIn
@@ -49,10 +49,13 @@ async def add_film_genre(
 
     Returns:
         dict: The film's genres."""
-    genres = await service.add_film_genre(film_id, genre_id)
+    if await service.get_film_by_id(film_id=film_id):
+        genres = await service.add_film_genre(film_id, genre_id)
+        if genres is not None:
+            return {"genres": [dict(genre) for genre in genres]}
 
-    return {"genres": [dict(genre) for genre in genres]}
-# dodać raise exception
+    raise HTTPException(status_code=404, detail="Film or genre not found")
+
 
 @router.get("/all", response_model=Iterable[FilmDTO], status_code=200)
 @inject
@@ -69,36 +72,32 @@ async def get_all_films(
     films = await service.get_all_films()
     return films
 
-@router.get ("/title", response_model=Iterable[FilmDTO], status_code=200)
+@router.get("", response_model=Iterable[FilmDTO], status_code=200)
 @inject
-async def get_films_by_title(
-        title: str,
+async def search_films(
+        title: str | None = None,
+        genre_ids: list[int] | None = Query(default=None),
+        director_name: str | None = None,
+        year: int | None = None,
         service: IFilmService = Depends(Provide[Container.film_service]),
-) -> Iterable:
-    """An endpoint for getting films with the provided text in their title.
+) -> Iterable[FilmDTO]:
+    """The endpoint for searching a film from the repository with various filters.
 
-    Args:
-        service (IFilmService, optional): The injected service dependency
-        title (string): Part of film's title.
-    Returns:
-        Iterable[Film]: The film attribute collection."""
-    films = await service.get_films_by_title(title)
-    return films
+        Args:
+            title (str): Part of film's title.
+            genre_ids (list[int]): Film's genres.
+            director_name (str): Name of the film's director.
+            year (int): Release year.
+            service (IFilmService, optional): The injected service dependency.
 
-@router.get("/genres", response_model=Iterable[FilmDTO], status_code=200)
-@inject
-async def get_films_by_genres(
-        genres: Iterable[int],
-        service: IFilmService = Depends(Provide[Container.film_service]),
-) -> Iterable:
-    """An endpoint for getting films with provided genre list.
-
-    Args:
-        service (IFilmService, optional): The injected service dependency.
-        genres (Iterable[int]): List of genre IDs.
-    Returns:
-        Iterable[Film]: The film attribute collection."""
-    films = await service.get_films_by_genres(genres)
+        Returns:
+            Iterable[Any]: List of films that match the criteria."""
+    films = await service.search_films(
+        title=title,
+        genre_ids=genre_ids,
+        director_name=director_name,
+        year=year,
+    )
     return films
 
 @router.get("/{film_id}/genres", response_model=Iterable[Genre], status_code=200)
@@ -113,8 +112,10 @@ async def get_film_genres(
         service (IFilmService, optional): The injected service dependency.
     Returns:
         Iterable[Genre]: The genre attribute collection."""
-    genres = await service.get_film_genres(film_id)
-    return genres
+    if await service.get_film_by_id(film_id=film_id):
+        genres = await service.get_film_genres(film_id)
+        return genres
+    raise HTTPException(status_code=404, detail="Film not found")
 
 @router.get("/{film_id}", response_model=Film, status_code=200)
 @inject

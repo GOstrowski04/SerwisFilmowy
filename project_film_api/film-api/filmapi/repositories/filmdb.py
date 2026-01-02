@@ -35,36 +35,22 @@ class FilmRepository(IFilmRepository):
         )
         films = await database.fetch_all(query)
         return [FilmDTO.from_record(film) for film in films]
-    async def get_films_by_title(self, title: str) -> Iterable[Any]:
-        """The method for getting films by a part of their title.
-        Args:
-            title (str): Part of the film's title.
-        Returns:
-            Iterable[Any]: Films that fit the criteria."""
-        query = (
-            select(
-                film_table,
-                director_table.c.id.label("director_id"),
-                director_table.c.name.label("director_name"),
-                director_table.c.birth_year.label("birth_year"),
-            )
-            .select_from(
-                film_table
-                .join(director_table, film_table.c.director_id == director_table.c.id)
-            )
-            .where(
-                film_table.c.title.ilike(f'%{title}%')
-            )
-        )
-        films = await database.fetch_all(query)
-        return [FilmDTO.from_record(film) for film in films]
 
-    async def get_films_by_genres(self, genres: Iterable[int]) -> Iterable[Any]:
-        """The method for getting films from the database by their genres.
+    async def search_films(
+            self,
+            title: str | None = None,
+            genre_ids: list[int] | None = None,
+            director_name: str | None = None,
+            year: int | None = None,
+    ) -> Iterable[Any]:
+        """The method for searching a film from the database with various filters.
         Args:
-            genres (Iterable[int]): Genres' IDs.
+            title (str): Part of film's title.
+            genre_ids (list[int]): Film's genres.
+            director_name (str): Name of the film's director.
+            year (int): Release year.
         Returns:
-            Iterable[Any]: Films from the database."""
+            Iterable[Any]: List of films that match the criteria."""
         query = (
             select(
                 film_table,
@@ -78,13 +64,20 @@ class FilmRepository(IFilmRepository):
                 .outerjoin(film_genre_table, film_table.c.id == film_genre_table.c.film_id)
                 .outerjoin(genre_table, film_genre_table.c.genre_id == genre_table.c.id)
             )
-            .where(
-                genre_table.c.id.in_(genres)
-            )
-            )
+            .distinct(film_table.c.id)
+        )
+
+        if title:
+            query = query.where(film_table.c.title.ilike(f"%{title}%"))
+        if genre_ids:
+            query = query.where(genre_table.c.id.in_(genre_ids))
+        if director_name:
+            query = query.where(director_table.c.name == director_name)
+        if year:
+            query = query.where(film_table.c.release_year == year)
+
         films = await database.fetch_all(query)
         return [FilmDTO.from_record(film) for film in films]
-
 
     async def get_film_by_id(self, film_id: int) -> Any | None:
         """The method for getting a film from the database by its id.
