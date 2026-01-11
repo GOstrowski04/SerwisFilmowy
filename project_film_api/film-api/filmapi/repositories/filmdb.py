@@ -108,11 +108,18 @@ class FilmRepository(IFilmRepository):
             genre_id (int): A genre's id.
         Returns:
             Iterable[Any]: List of a film's genres."""
+        test = await database.fetch_one(
+            select(film_genre_table).where(
+                film_genre_table.c.film_id == film_id,
+                film_genre_table.c.genre_id == genre_id,
+            )
+        )
+        if test:
+            return await self.get_film_genres(film_id)
+
         query = film_genre_table.insert().values(film_id=film_id, genre_id=genre_id)
         await database.execute(query)
-        query = film_genre_table.select().where(film_genre_table.c.film_id == film_id)
-        film_genres = await database.fetch_all(query)
-        return [dict(film_genre) for film_genre in film_genres]
+        return await self.get_film_genres(film_id)
 
     async def get_film_genres(self, film_id: int) -> Iterable[Any] | None:
         """The method for getting a film's genres.
@@ -165,6 +172,7 @@ class FilmRepository(IFilmRepository):
             film = await self._get_by_id(film_id)
             return Film(**dict(film)) if film else None
         return None
+
     async def delete_film(self, film_id: int) -> bool:
         """The method for deleting film data from the database.
         Args:

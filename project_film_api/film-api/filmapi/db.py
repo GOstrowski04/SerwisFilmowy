@@ -49,7 +49,7 @@ film_genre_table = sqlalchemy.Table(
     "film_genres",
     metadata,
     sqlalchemy.Column("film_id", sqlalchemy.Integer, sqlalchemy.ForeignKey("films.id"),
-        primary_key=True),
+                      primary_key=True),
     sqlalchemy.Column("genre_id", sqlalchemy.Integer, sqlalchemy.ForeignKey("genres.id"),
                       primary_key=True),
 )
@@ -65,6 +65,18 @@ user_table = sqlalchemy.Table(
     ),
     sqlalchemy.Column("email", sqlalchemy.String, unique=True),
     sqlalchemy.Column("password", sqlalchemy.String),
+)
+
+watched_films_table = sqlalchemy.Table(
+    "watched_films",
+    metadata,
+    sqlalchemy.Column("user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id"),
+                      primary_key=True),
+    sqlalchemy.Column("film_id", sqlalchemy.Integer, sqlalchemy.ForeignKey("films.id"),
+                      primary_key=True),
+    sqlalchemy.Column("review_date", sqlalchemy.DateTime, nullable=True),
+    sqlalchemy.Column("rating", sqlalchemy.Integer, nullable=True),
+    sqlalchemy.Column("review", sqlalchemy.Text, nullable=True),
 )
 
 db_uri = (

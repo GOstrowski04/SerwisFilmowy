@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class GenreIn(BaseModel):
@@ -7,3 +7,4 @@ class GenreIn(BaseModel):
 
 class Genre(GenreIn):
     id: int
+    model_config = ConfigDict(from_attributes=True, extra="ignore")

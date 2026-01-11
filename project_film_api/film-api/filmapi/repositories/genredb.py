@@ -1,16 +1,12 @@
 from typing import Any, Iterable
 
-from asyncpg import Record  # type: ignore
-from sqlalchemy import select, join
+from asyncpg import Record
 
-from filmapi.domain.film import Film
 from filmapi.repositories.igenre import IGenreRepository
 from filmapi.domain.genre import Genre, GenreIn
 from filmapi.db import (
     genre_table,
-    film_table,
-    film_genre_table,
-    database, director_table,
+    database,
 )
 
 class GenreRepository(IGenreRepository):
