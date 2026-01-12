@@ -37,10 +37,58 @@ class IWatchedFilmRepository(ABC):
     ) -> Iterable[Any]:
         """Abstract for getting a film's reviews.
         Args:
-            film_id (UUID5): Film's id.
+            film_id (int): Film's id.
 
         Returns:
             Iterable[Any]: Film's reviews."""
+
+    @abstractmethod
+    async def get_film_average_rating(
+            self,
+            film_id: int,
+    ) -> float:
+        """Abstract for getting a film's average rating.
+        Args:
+            film_id (int): Film's id.
+
+        Returns:
+            float: Film's average rating."""
+
+    @abstractmethod
+    async def get_average_user_rating(
+            self,
+            user_id: UUID5,
+            ) -> float:
+        """Abstract for getting an user's average film rating.
+        Args:
+            user_id (UUID5): User's id.
+
+        Returns:
+            float: User's average film rating."""
+
+    @abstractmethod
+    async def get_film_watched_number(
+            self,
+            film_id: int
+            ) -> int:
+        """Abstract for getting the number of users that watched a given film.
+        Args:
+            film_id (int): Film's id.
+
+        Returns:
+            int: Number of users that watched a given film."""
+
+    @abstractmethod
+    async def get_user_watched_number(
+            self,
+            user_id: UUID5
+            ) -> int:
+        """Abstract for getting the number of films watched by given user.
+        Args:
+            user_id (UUID5): User's id.
+
+        Returns:
+            int: Number of films watched by a given user."""
 
     @abstractmethod
     async def add_to_watched(

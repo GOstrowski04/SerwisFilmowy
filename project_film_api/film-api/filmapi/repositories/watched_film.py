@@ -1,10 +1,10 @@
 
 from datetime import datetime
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 
 from asyncpg import Record
 from pydantic import UUID5
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from filmapi.domain.watched_film import WatchedFilm
 from filmapi.dto.watched_filmdto import WatchedFilmDTO, ReviewDTO
@@ -68,6 +68,95 @@ class WatchedFilmRepository(IWatchedFilmRepository):
         watched_film = await database.fetch_one(query)
         return WatchedFilmDTO.from_record(watched_film) if watched_film else None
 
+    async def get_film_average_rating(
+            self,
+            film_id: int,
+    ) -> float:
+        """The method for getting a film's average rating.
+        Args:
+            film_id (int): Film's id.
+
+        Returns:
+            float: Film's average rating."""
+        query = (
+            select(
+                func.avg(watched_films_table.c.rating).label("average")
+            )
+            .where(
+                watched_films_table.c.film_id == film_id,
+                watched_films_table.c.rating.isnot(None)
+            )
+        )
+        average = await database.fetch_one(query)
+        if average["average"] is None:
+            return 0.0
+        return float(average["average"])
+
+    async def get_average_user_rating(
+            self,
+            user_id: UUID5,
+            ) -> float:
+        """The method for getting an user's average film rating.
+        Args:
+            user_id (UUID5): User's id.
+
+        Returns:
+            float: User's average film rating."""
+        query = (
+            select(
+                func.avg(watched_films_table.c.rating).label("average")
+            )
+            .where(
+                watched_films_table.c.user_id == user_id,
+                watched_films_table.c.rating.isnot(None)
+            )
+        )
+        average = await database.fetch_one(query)
+        if average["average"] is None:
+            return 0.0
+        return float(average["average"])
+
+    async def get_film_watched_number(
+            self,
+            film_id: int
+            ) -> int:
+        """The method for getting the number of users that watched a given film.
+                Args:
+                    film_id (int): Film's id.
+
+                Returns:
+                    int: Number of users that watched a given film."""
+        query = (
+            select(
+                func.count(watched_films_table.c.user_id).label("number")
+            )
+            .where(
+                watched_films_table.c.film_id == film_id,
+            )
+        )
+        number = await database.fetch_one(query)
+        return int(number["number"])
+
+    async def get_user_watched_number(
+            self,
+            user_id: UUID5
+            ) -> int:
+        """Abstract for getting the number of films watched by given user.
+                Args:
+                    user_id (UUID5): User's id.
+
+                Returns:
+                    int: Number of films watched by a given user."""
+        query = (
+            select(
+                func.count(watched_films_table.c.film_id).label("number")
+            )
+            .where(
+                watched_films_table.c.user_id == user_id,
+            )
+        )
+        number = await database.fetch_one(query)
+        return int(number["number"])
 
     async def get_film_reviews(
             self,
@@ -75,7 +164,7 @@ class WatchedFilmRepository(IWatchedFilmRepository):
     ) -> Iterable[Any]:
         """The method for getting a film's reviews.
         Args:
-            film_id (UUID5): Film's id.
+            film_id (int): Film's id.
 
         Returns:
             Iterable[Any]: Film's reviews."""
@@ -103,8 +192,8 @@ class WatchedFilmRepository(IWatchedFilmRepository):
             self,
             user_id: UUID5,
             film_id: int,
-            rating: int | None = None,
-            review: str | None = None,
+            rating: Optional[int] | None = None,
+            review: Optional[str] | None = None,
     ) -> Any | None:
         """Abstract for adding a film to an user's watched list.
         Args:
@@ -115,9 +204,6 @@ class WatchedFilmRepository(IWatchedFilmRepository):
 
         Returns:
             Any | None: Added film."""
-        test = await self.get_watched_film(film_id=film_id, user_id=user_id)
-        if test:
-            return test
         query = (watched_films_table.insert()
                  .values(user_id=user_id,
                          film_id=film_id,
@@ -126,7 +212,8 @@ class WatchedFilmRepository(IWatchedFilmRepository):
                          review_date=datetime.now())
                  )
         await database.execute(query)
-        return await self.get_watched_film(film_id=film_id, user_id=user_id)
+        new_watched_film = await self.get_watched_film(film_id=film_id, user_id=user_id)
+        return WatchedFilm(**dict(new_watched_film)) if new_watched_film else None
 
     async def update_watched(
             self,
