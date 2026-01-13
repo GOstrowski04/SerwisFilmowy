@@ -1,9 +1,8 @@
 
-from datetime import datetime, timezone
 from typing import Any, Iterable, Optional
 
 from asyncpg import Record
-from pydantic import UUID5
+from pydantic import UUID4
 from sqlalchemy import select, func
 from asyncpg.exceptions import UniqueViolationError
 
@@ -17,13 +16,16 @@ from filmapi.db import (
 )
 
 class WatchedFilmRepository(IWatchedFilmRepository):
-    async def get_all_watched_films(self, user_id: UUID5) -> Iterable[Any]:
+    async def get_all_watched_films(self, user_id: UUID4) -> Iterable[Any]:
         """The method for getting all of user's watched films from the database.
+
         Args:
-            user_id (UUID5): User's id.
+            user_id (UUID4): User's id.
 
         Returns:
-            Iterable[WatchedFilm]: List of user's watched films."""
+            Iterable[WatchedFilm]: List of user's watched films.
+        """
+
         query = (
             select(
                 watched_films_table.c.film_id,
@@ -41,16 +43,19 @@ class WatchedFilmRepository(IWatchedFilmRepository):
 
     async def get_watched_film(
             self,
-            user_id: UUID5,
+            user_id: UUID4,
             film_id: int,
     ) -> Any | None:
         """The method for getting an user's specific watched film from the database.
+
         Args:
-            user_id (UUID5): User's id.
+            user_id (UUID4): User's id.
             film_id (int): Film's id.
 
         Returns:
-            Any | None: User's watched film if it exists."""
+            Any | None: User's watched film if it exists.
+        """
+
         query = (
             select(
                 watched_films_table.c.film_id,
@@ -74,11 +79,13 @@ class WatchedFilmRepository(IWatchedFilmRepository):
             film_id: int,
     ) -> float:
         """The method for getting a film's average rating.
+
         Args:
             film_id (int): Film's id.
 
         Returns:
-            float: Film's average rating."""
+            float: Film's average rating.
+        """
         query = (
             select(
                 func.avg(watched_films_table.c.rating).label("average")
@@ -95,13 +102,16 @@ class WatchedFilmRepository(IWatchedFilmRepository):
 
     async def get_average_user_rating(
             self,
-            user_id: UUID5,
+            user_id: UUID4,
             ) -> float:
         """The method for getting an user's average film rating.
+
         Args:
-            user_id (UUID5): User's id.
+            user_id (UUID4): User's id.
+
         Returns:
-            float: User's average film rating."""
+            float: User's average film rating.
+        """
         query = (
             select(
                 func.avg(watched_films_table.c.rating).label("average")
@@ -121,11 +131,13 @@ class WatchedFilmRepository(IWatchedFilmRepository):
             film_id: int
             ) -> int:
         """The method for getting the number of users that watched a given film.
-                Args:
-                    film_id (int): Film's id.
+        Args:
+            film_id (int): Film's id.
 
-                Returns:
-                    int: Number of users that watched a given film."""
+        Returns:
+            int: Number of users that watched a given film.
+        """
+
         query = (
             select(
                 func.count(watched_films_table.c.user_id).label("number")
@@ -139,14 +151,16 @@ class WatchedFilmRepository(IWatchedFilmRepository):
 
     async def get_user_watched_number(
             self,
-            user_id: UUID5
+            user_id: UUID4
             ) -> int:
-        """Abstract for getting the number of films watched by given user.
-                Args:
-                    user_id (UUID5): User's id.
+        """The method for getting the number of films watched by given user.
+        Args:
+            user_id (UUID4): User's id.
 
-                Returns:
-                    int: Number of films watched by a given user."""
+            Returns:
+                int: Number of films watched by a given user.
+        """
+
         query = (
             select(
                 func.count(watched_films_table.c.film_id).label("number")
@@ -163,14 +177,17 @@ class WatchedFilmRepository(IWatchedFilmRepository):
             film_id: int,
     ) -> Iterable[Any]:
         """The method for getting a film's reviews.
+
         Args:
             film_id (int): Film's id.
 
         Returns:
-            Iterable[Any]: Film's reviews."""
+            Iterable[Any]: Film's reviews.
+        """
+
         query = (
             select(
-                watched_films_table.user_id,
+                watched_films_table.c.user_id,
                 film_table.c.title,
                 watched_films_table.c.rating,
                 watched_films_table.c.review,
@@ -190,27 +207,31 @@ class WatchedFilmRepository(IWatchedFilmRepository):
 
     async def add_to_watched(
             self,
-            user_id: UUID5,
+            user_id: UUID4,
             film_id: int,
             rating: Optional[int] | None = None,
             review: Optional[str] | None = None,
     ) -> Any | None:
         """Abstract for adding a film to an user's watched list.
+
         Args:
-            user_id (UUID5): User's id.
+            user_id (UUID4): User's id.
             film_id (int): Added film's id.
             rating (int): Rating given to the film (1-10).
             review (str): Review's text.
 
         Returns:
-            Any | None: Added film."""
+            Any | None: Added film.
+        """
 
         query = (watched_films_table.insert()
                  .values(user_id=user_id,
                          film_id=film_id,
                          rating=rating,
                          review=review,
-                         review_date=datetime.now(timezone.utc))
+                         review_date=func.now(),
+                         )
+
                  )
 
         await database.execute(query)
@@ -218,20 +239,23 @@ class WatchedFilmRepository(IWatchedFilmRepository):
 
     async def update_watched(
             self,
-            user_id: UUID5,
+            user_id: UUID4,
             film_id: int,
             rating: int | None = None,
             review: str | None = None,
     ) -> Any | None:
         """Abstract for editing a user's watched film.
+
         Args:
-            user_id (UUID5): User's id.
+            user_id (UUID4): User's id.
             film_id (int): Film's id.
             rating (int): Rating given to the film (1-10).
             review (str): Review's text.
 
         Returns:
-            Any | None: Updated film."""
+            Any | None: Updated film.
+        """
+
         if await self._get_by_id(film_id=film_id, user_id=user_id):
             query = (
                 watched_films_table.update()
@@ -243,7 +267,8 @@ class WatchedFilmRepository(IWatchedFilmRepository):
                         film_id=film_id,
                         rating=rating,
                         review=review,
-                        review_date=datetime.now(timezone.utc))
+                        review_date=func.now()
+                        )
                 )
             await database.execute(query)
             return await self.get_watched_film(film_id=film_id, user_id=user_id)
@@ -251,15 +276,18 @@ class WatchedFilmRepository(IWatchedFilmRepository):
 
     async def delete_watched(
             self,
-            user_id: UUID5,
+            user_id: UUID4,
             film_id: int) -> bool:
         """Abstract for deleting a watched film from an user's list.
+
         Args:
-            user_id (UUID5): User's id.
+            user_id (UUID4): User's id.
             film_id (int): Film's id.
 
         Returns:
-            bool: Success of the operation."""
+            bool: Success of the operation.
+        """
+
         if await self._get_by_id(user_id=user_id, film_id=film_id):
             query = (watched_films_table.delete()
                      .where(watched_films_table.c.film_id == film_id,
@@ -270,13 +298,17 @@ class WatchedFilmRepository(IWatchedFilmRepository):
         return False
 
 
-    async def _get_by_id(self, film_id: int, user_id: UUID5) -> Record | None:
+    async def _get_by_id(self, film_id: int, user_id: UUID4) -> Record | None:
         """A private method for getting a watched film from the db by its IDs.
-            Args:
-                film_id (int): Film's id.
-                user_id (UUID5): User's id.
-            Returns:
-                Any | None: Film record if possible."""
+
+        Args:
+            film_id (int): Film's id.
+            user_id (UUID4): User's id.
+
+        Returns:
+            Any | None: Film record if possible.
+        """
+
         query = (watched_films_table.select()
                  .where(
             watched_films_table.c.film_id == film_id,

@@ -1,10 +1,12 @@
 """A repository for user entity."""
 
 
-from typing import Any
+from typing import Any, Iterable
 
-from pydantic import UUID5
+from pydantic import UUID4
+from sqlalchemy import select
 
+from filmapi.dto.userdto import UserDTO
 from filmapi.utils.password import hash_password
 from filmapi.domain.user import UserIn
 from filmapi.repositories.iuser import IUserRepository
@@ -34,11 +36,11 @@ class UserRepository(IUserRepository):
 
         return await self.get_by_uuid(new_user_uuid)
 
-    async def get_by_uuid(self, uuid: UUID5) -> Any | None:
+    async def get_by_uuid(self, uuid: UUID4) -> Any | None:
         """A method getting user by UUID.
 
         Args:
-            uuid (UUID5): UUID of the user.
+            uuid (UUID4): UUID of the user.
 
         Returns:
             Any | None: The user object if exists.
@@ -68,12 +70,12 @@ class UserRepository(IUserRepository):
 
         return user
 
-    async def follow_user(self, follower_id: UUID5, followed_id: UUID5) -> bool:
+    async def follow_user(self, follower_id: UUID4, followed_id: UUID4) -> bool:
         """A method following another user
 
         Args:
-            follower_id (UUID5): The user id.
-            followed_id (UUID5): The user id.
+            follower_id (UUID4): The user id.
+            followed_id (UUID4): The user id.
 
         Returns:
             bool: Success of the operation.
@@ -86,15 +88,15 @@ class UserRepository(IUserRepository):
         await database.execute(query)
         return True
 
-    async def unfollow_user(self, follower_id: UUID5, followed_id: UUID5) -> bool:
-        """An abstract unfollowing another user
+    async def unfollow_user(self, follower_id: UUID4, followed_id: UUID4) -> bool:
+        """A method unfollowing another user
 
-            Args:
-                follower_id (UUID5): The user id.
-                followed_id (UUID5): The user id.
+        Args:
+            follower_id (UUID4): The user id.
+            followed_id (UUID4): The user id.
 
-            Returns:
-                bool: Success of the operation.
+        Returns:
+            bool: Success of the operation.
          """
 
         query = (
@@ -104,6 +106,75 @@ class UserRepository(IUserRepository):
                 follow_table.c.followed_id == followed_id,
             )
         )
-        result = await database.execute(query)
+        await database.execute(query)
         return True
-    as
+
+    async def get_followers(self, user_id: UUID4) -> Iterable[UserDTO]:
+        """A method getting all followers of the user.
+
+        Args:
+            user_id (UUID4): The user id.
+
+        Returns:
+            Iterable[UserDTO]: All followers of the user.
+        """
+
+        query = (
+            select(
+                user_table.c.id,
+                user_table.c.email,
+            ).select_from(
+                follow_table
+                .join(user_table, user_table.c.id == follow_table.c.follower_id)
+            ).where(
+                follow_table.c.followed_id == user_id
+            )
+        )
+        followers = await database.fetch_all(query)
+        return [UserDTO(**user) for user in followers]
+
+    async def get_following(self, user_id: UUID4) -> Iterable[UserDTO]:
+        """A method getting all followed users by given user.
+
+        Args:
+            user_id (UUID4): The user id.
+
+        Returns:
+            Iterable[UserDTO]: All followed users by the user.
+        """
+
+        query = (
+            select(
+                user_table.c.id,
+                user_table.c.email,
+            ).select_from(
+                follow_table
+                .join(user_table, user_table.c.id == follow_table.c.followed_id)
+            ).where(
+                follow_table.c.follower_id == user_id
+            )
+        )
+        followed = await database.fetch_all(query)
+        return [UserDTO(**user) for user in followed]
+
+    async def is_following(self, follower_id: UUID4, followed_id: UUID4) -> bool:
+        """A method checking if the user is following another given user.
+
+        Args:
+            follower_id (UUID4): The user id.
+            followed_id (UUID4): The user id.
+
+        Returns:
+             bool: Whether the user is following another given user.
+        """
+
+        query = (
+            select(follow_table.c.follower_id)
+            .where(
+                follow_table.c.follower_id == follower_id,
+                follow_table.c.followed_id == followed_id,
+            )
+            .limit(1)
+        )
+        follower = await database.fetch_one(query)
+        return follower is not None

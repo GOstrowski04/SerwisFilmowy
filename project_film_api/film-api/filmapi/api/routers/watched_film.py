@@ -4,11 +4,11 @@ from dependency_injector.wiring import inject, Provide
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import UUID5
+from pydantic import UUID4
 
 from filmapi.container import Container
-from filmapi.domain.watched_film import WatchedFilm
 from filmapi.dto.watched_filmdto import WatchedFilmDTO, ReviewDTO
+from filmapi.services.ifilm import IFilmService
 from filmapi.services.iwatched_film import IWatchedFilmService
 from filmapi.utils import consts
 
@@ -16,7 +16,7 @@ bearer_scheme = HTTPBearer()
 router = APIRouter()
 
 
-@router.post("/watched/add", response_model=WatchedFilmDTO, status_code = 201)
+@router.post("/add", response_model=WatchedFilmDTO, status_code = 201)
 @inject
 async def add_to_watched(
             film_id: int,
@@ -24,6 +24,7 @@ async def add_to_watched(
             review: Optional[str] | None = None,
             credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
             service: IWatchedFilmService = Depends(Provide[Container.watched_film_service]),
+            film_service: IFilmService = Depends(Provide[Container.film_service])
     ) -> dict:
     """An endpoint for adding a film to a user's watched list.
 
@@ -33,9 +34,11 @@ async def add_to_watched(
             review (str): Review's text.
             credentials (HTTPAuthorizationCredentials, optional): The credentials.
             service (IWatchedFilmService, optional): The injected service dependency.
+            film_service (IFilmService, optional): The injected service dependency.
 
         Raises:
             HTTPException: 403 if user is not authorized.
+            HTTPException: 404 if film does not exist.
             HTTPException: 409 if film already exists in the watched list or the rating is not between 0 and 10.
 
         Returns:
@@ -49,13 +52,15 @@ async def add_to_watched(
         algorithms=[consts.ALGORITHM],
     )
     user_uuid = token_payload.get("sub")
-
     if not user_uuid:
         raise HTTPException(status_code=403, detail="Unauthorized")
+    if not await film_service.get_film_by_id(film_id=film_id):
+        raise HTTPException(status_code=404, detail="Film does not exist.")
     if await service.get_watched_film(user_id=user_uuid, film_id=film_id):
         raise HTTPException(status_code=409, detail="Film already added to watched list")
-    if rating < 0 or rating > 10:
-        raise HTTPException(status_code=409, detail="Rating must be between 0 and 10")
+    if rating is not None:
+        if rating < 0 or rating > 10:
+            raise HTTPException(status_code=409, detail="Rating must be between 0 and 10")
 
     new_watched = await service.add_to_watched(
         user_id=user_uuid,
@@ -65,7 +70,7 @@ async def add_to_watched(
     )
     return new_watched.model_dump() if new_watched else {}
 
-@router.put("/watched/update", response_model=WatchedFilmDTO, status_code=201)
+@router.put("/update", response_model=WatchedFilmDTO, status_code=201)
 @inject
 async def update_watched(
         film_id: int,
@@ -117,7 +122,7 @@ async def update_watched(
 
     raise HTTPException(status_code=404, detail="Watched film not found.")
 
-@router.get("/watched/all", response_model=Iterable[WatchedFilmDTO], status_code=200)
+@router.get("/all", response_model=Iterable[WatchedFilmDTO], status_code=200)
 @inject
 async def get_all_watched_films(
         credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
@@ -150,7 +155,7 @@ async def get_all_watched_films(
     watched_films = await service.get_all_watched_films(user_id=user_uuid)
     return [watched_film.model_dump() for watched_film in watched_films]
 
-@router.get("/watched/{film_id}", response_model=WatchedFilmDTO, status_code=200)
+@router.get("/{film_id}", response_model=WatchedFilmDTO, status_code=200)
 @inject
 async def get_watched_film(
         film_id: int,
@@ -213,13 +218,13 @@ async def get_film_average_rating(
 @router.get("/user/{user_id}/avgrating", response_model=float, status_code=200)
 @inject
 async def get_average_user_rating(
-        user_id: UUID5,
+        user_id: UUID4,
         service: IWatchedFilmService = Depends(Provide[Container.watched_film_service]),
 ) -> float:
     """The endpoint for getting user's average film rating.
 
     Args:
-        user_id (UUID5): The id of the user.
+        user_id (UUID4): The id of the user.
         service(IWatchedFilmService, optional): The injected service dependency.
 
     Raises:
@@ -256,13 +261,13 @@ async def get_film_watched_number(
 @router.get("/user/{user_id}/numratings", response_model=int, status_code=200)
 @inject
 async def get_user_watched_number(
-        user_id: UUID5,
+        user_id: UUID4,
         service: IWatchedFilmService = Depends(Provide[Container.watched_film_service]),
 ) -> int:
     """The endpoint for getting the number of films that have been watched by given user.
 
     Args:
-        user_id(UUID5): The id of the user.
+        user_id(UUID4): The id of the user.
         service(IWatchedFilmService, optional): The injected service dependency.
 
     Returns:
@@ -284,10 +289,13 @@ async def get_film_reviews(
         film_id (int): The id of the film.
         service(IWatchedFilmService, optional): The injected service dependency.
 
+    Raises:
+        HTTPException: 404 if film does not exist.
+
     Returns:
         Iterable[ReviewDTO]: The film's reviews.
     """
 
     if reviews := await service.get_film_reviews(film_id=film_id):
         return [review.model_dump() for review in reviews]
-    raise HTTPException(status_code=404, detail="Film not found.")
+    raise HTTPException(status_code=404, detail="Film or reviews not found.")

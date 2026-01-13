@@ -17,9 +17,10 @@ from filmapi.db import (
 class FilmRepository(IFilmRepository):
     async def get_all_films(self) -> Iterable[Any]:
         """The method for getting all films from the database.
-                Returns:
-                    Iterable[Any]: The collection of the all films.
-                """
+
+            Returns:
+                Iterable[Any]: The collection of the all films.
+        """
         query = (
             select(
                 film_table,
@@ -44,13 +45,17 @@ class FilmRepository(IFilmRepository):
             year: int | None = None,
     ) -> Iterable[Any]:
         """The method for searching a film from the database with various filters.
+
         Args:
             title (str): Part of film's title.
             genre_ids (list[int]): Film's genres.
             director_name (str): Name of the film's director.
             year (int): Release year.
+
         Returns:
-            Iterable[Any]: List of films that match the criteria."""
+            Iterable[Any]: List of films that match the criteria.
+        """
+
         query = (
             select(
                 film_table,
@@ -60,7 +65,7 @@ class FilmRepository(IFilmRepository):
             )
             .select_from(
                 film_table
-                .join(director_table, film_table.c.director_id == director_table.c.id)
+                .outerjoin(director_table, film_table.c.director_id == director_table.c.id)
                 .outerjoin(film_genre_table, film_table.c.id == film_genre_table.c.film_id)
                 .outerjoin(genre_table, film_genre_table.c.genre_id == genre_table.c.id)
             )
@@ -81,10 +86,14 @@ class FilmRepository(IFilmRepository):
 
     async def get_film_by_id(self, film_id: int) -> Any | None:
         """The method for getting a film from the database by its id.
+
         Args:
             film_id (int): A film's id.
+
         Returns:
-            Any | None: Film in the database if it exists."""
+            Any | None: Film in the database if it exists.
+        """
+
         query = (
             select(
                 film_table,
@@ -103,11 +112,15 @@ class FilmRepository(IFilmRepository):
 
     async def add_film_genre(self, film_id: int, genre_id: int) -> Iterable[Any] | None:
         """The method for adding a genre to a film.
+
         Args:
             film_id (int): A film's id.
             genre_id (int): A genre's id.
+
         Returns:
-            Iterable[Any]: List of a film's genres."""
+            Iterable[Any]: List of a film's genres.
+        """
+
         test = await database.fetch_one(
             select(film_genre_table).where(
                 film_genre_table.c.film_id == film_id,
@@ -123,10 +136,14 @@ class FilmRepository(IFilmRepository):
 
     async def get_film_genres(self, film_id: int) -> Iterable[Any] | None:
         """The method for getting a film's genres.
+
         Args:
             film_id (int): A film's id.
+
         Returns:
-            Iterable[Any]: List of a film's genres."""
+            Iterable[Any]: List of a film's genres.
+        """
+
         query = (
             select(
                 genre_table.c.id,
@@ -144,10 +161,14 @@ class FilmRepository(IFilmRepository):
 
     async def create_film(self, data: FilmIn) -> Any | None:
         """The method for creating a film entry in database.
+
         Args:
             data (FilmIn): Attributes of the film.
+
         Returns:
-              Any | None: Newly created film."""
+              Any | None: Newly created film.
+        """
+
         query = (film_table.insert()
                  .values(**data.model_dump()))
         new_film_id = await database.execute(query)
@@ -156,11 +177,13 @@ class FilmRepository(IFilmRepository):
 
     async def update_film(self, film_id: int, data: FilmIn) -> Any | None:
         """The method for updating film data in database.
-            Args:
-                film_id (int): Film's id.
-                data (FilmIn): New attributes for the film.
-            Returns:
-                Any | None: Updated film. """
+
+        Args:
+            film_id (int): Film's id.
+            data (FilmIn): New attributes for the film.
+
+        Returns:
+            Any | None: Updated film. """
 
         if await self._get_by_id(film_id):
             query = (
@@ -175,10 +198,14 @@ class FilmRepository(IFilmRepository):
 
     async def delete_film(self, film_id: int) -> bool:
         """The method for deleting film data from the database.
+
         Args:
             film_id (int): Film's id.
+
         Returns:
-            bool: Success of the operation."""
+            bool: Success of the operation.
+        """
+
         if await self._get_by_id(film_id):
             query = film_table \
                 .delete() \
@@ -190,10 +217,13 @@ class FilmRepository(IFilmRepository):
 
     async def _get_by_id(self, film_id: int) -> Record | None:
         """A private method for getting a film from the db by its ID.
-            Args:
-                film_id (int): Film's id.
-            Returns:
-                Any | None: Film record if possible."""
+
+        Args:
+            film_id (int): Film's id.
+        Returns:
+            Any | None: Film record if possible.
+        """
+
         query = (film_table.select()
                  .where(film_table.c.id == film_id))
         return await database.fetch_one(query)

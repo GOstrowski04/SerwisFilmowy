@@ -25,7 +25,8 @@ async def create_director(
         service (IDirectorService, optional): The injected service dependency.
 
     Returns:
-        dict: The new director attributes."""
+        dict: The new director attributes.
+    """
 
     new_director = await service.create_director(director)
 
@@ -43,7 +44,9 @@ async def get_all_directors(
         service (IDirectorService, optional): The injected service dependency.
 
     Returns:
-        Iterable: The director attribute collection. """
+        Iterable: The director attribute collection.
+    """
+
     directors = await service.get_all_directors()
     return directors
 
@@ -58,8 +61,11 @@ async def get_director_by_name(
     Args:
         service (IDirectorService, optional): The injected service dependency
         name (string): Part of director's name.
+
     Returns:
-        Iterable[Director]: The director attribute collection."""
+        Iterable[Director]: The director attribute collection.
+    """
+
     directors = await service.get_director_by_name(name)
     return directors
 
@@ -80,7 +86,9 @@ async def get_director_by_id(
         HTTPException: 404 if director does not exist.
 
     Returns:
-        Director: The director attribute. """
+        Director: The director attribute.
+    """
+
     if director := await service.get_director_by_id(director_id):
         return director.model_dump()
     raise HTTPException(status_code=404, detail="Director not found")
@@ -103,7 +111,9 @@ async def edit_director(
         HTTPException: 404 if director does not exist.
 
     Returns:
-        dict: The updated director details."""
+        dict: The updated director details.
+    """
+
     if await service.get_director_by_id(director_id=director_id):
         new_director = await service.edit_director(
             director_id=director_id,
@@ -122,16 +132,17 @@ async def delete_director(
 ) -> None:
     """An endpoint for deleting directors.
 
-        Args:
-            director_id (int): Director's id.
-            service (IDirectorService, optional): The injected service dependency.
+    Args:
+        director_id (int): Director's id.
+        service (IDirectorService, optional): The injected service dependency.
 
-        Raises:
-            HTTPException: 404 if director does not exist.
+    Raises:
+        HTTPException: 404 if director does not exist.
 
-        Returns:
-            dict: Empty if operation finished.
-        """
+    Returns:
+        dict: Empty if operation finished.
+    """
+
     if await service.get_director_by_id(director_id=director_id):
         await service.delete_director(director_id)
         return

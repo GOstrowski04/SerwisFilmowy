@@ -1,4 +1,5 @@
 """A module containing user service."""
+from typing import Iterable
 
 from pydantic import UUID4
 
@@ -44,7 +45,6 @@ class UserService(IUserService):
         if user_data := await self._repository.get_by_email(user.email):
             if verify_password(user.password, user_data.password):
                 token_details = generate_user_token(user_data.id)
-                # trunk-ignore(bandit/B106)
                 return TokenDTO(token_type="Bearer", **token_details)
 
             return None
@@ -55,7 +55,7 @@ class UserService(IUserService):
         """A method getting user by UUID.
 
         Args:
-            uuid (UUID5): The UUID of the user.
+            uuid (UUID4): The UUID of the user.
 
         Returns:
             UserDTO | None: The user data, if found.
@@ -73,4 +73,67 @@ class UserService(IUserService):
             UserDTO | None: The user data, if found.
         """
 
-        return await self.get_by_email(email)
+        return await self._repository.get_by_email(email)
+
+    async def follow_user(self, follower_id: UUID4, followed_id: UUID4) -> bool:
+        """The method following another user
+
+        Args:
+            follower_id (UUID4): The user id.
+            followed_id (UUID4): The user id.
+
+        Returns:
+            bool: Success of the operation.
+        """
+
+        return await self._repository.follow_user(follower_id, followed_id)
+
+    async def unfollow_user(self, follower_id: UUID4, followed_id: UUID4) -> bool:
+        """The method unfollowing another user
+
+        Args:
+            follower_id (UUID4): The user id.
+            followed_id (UUID4): The user id.
+
+        Returns:
+            bool: Success of the operation.
+        """
+
+        return await self._repository.unfollow_user(follower_id, followed_id)
+
+    async def get_followers(self, user_id: UUID4) -> Iterable[UserDTO]:
+        """The method getting all followers of the user.
+
+        Args:
+            user_id (UUID4): The user id.
+
+        Returns:
+            Iterable[UserDTO]: All followers of the user.
+        """
+
+        return await self._repository.get_followers(user_id)
+
+    async def get_following(self, user_id: UUID4) -> Iterable[UserDTO]:
+        """The method getting all users followed by the user.
+
+        Args:
+            user_id (UUID4): The user id.
+
+        Returns:
+            Iterable[UserDTO]: All users followed by the user.
+        """
+
+        return await self._repository.get_following(user_id)
+
+    async def is_following(self, follower_id: UUID4, followed_id: UUID4) -> bool:
+        """The method checking if the user is following another given user.
+
+        Args:
+            follower_id (UUID4): The user id.
+            followed_id (UUID4): The user id.
+
+        Returns:
+            bool: Whether the user is following another given user.
+        """
+
+        return await self._repository.is_following(follower_id, followed_id)

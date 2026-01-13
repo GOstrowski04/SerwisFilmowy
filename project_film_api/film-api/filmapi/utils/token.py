@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta, timezone
 
 from jose import jwt
-from pydantic import UUID4
+from pydantic import UUID5
 
 from filmapi.utils.consts import (
     EXPIRATION_MINUTES,
@@ -12,7 +12,7 @@ from filmapi.utils.consts import (
 )
 
 
-def generate_user_token(user_uuid: UUID4) -> dict:
+def generate_user_token(user_uuid: UUID5) -> dict:
     """A function returning JWT token for user.
 
     Args:

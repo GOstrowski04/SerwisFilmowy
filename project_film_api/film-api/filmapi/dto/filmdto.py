@@ -26,8 +26,11 @@ class FilmDTO(BaseModel):
 
         Args:
             record (Record): The DB record.
+
         Returns:
-            FilmDTO: The final DTO instance."""
+            FilmDTO: The final DTO instance.
+        """
+
         record_dict = dict(record)
         return cls(
             id=record_dict.get("id"),

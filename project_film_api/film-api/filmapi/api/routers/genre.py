@@ -25,7 +25,8 @@ async def create_genre(
         service (IGenreService, optional): The injected service dependency.
 
     Returns:
-        dict: The new genre attributes."""
+        dict: The new genre attributes.
+    """
 
     new_genre = await service.create_genre(genre)
 
@@ -43,7 +44,9 @@ async def get_all_genres(
         service (IGenreService, optional): The injected service dependency.
 
     Returns:
-        Iterable: The genre attribute collection. """
+        Iterable: The genre attribute collection.
+    """
+
     genres = await service.get_all_genres()
     return genres
 
@@ -58,8 +61,11 @@ async def get_genre_by_name(
     Args:
         service (IGenreService, optional): The injected service dependency
         name (string): Part of genre's name.
+
     Returns:
-        Iterable[Genre]: The genre attribute collection."""
+        Iterable[Genre]: The genre attribute collection.
+    """
+
     genres = await service.get_genre_by_name(name)
     return genres
 
@@ -80,7 +86,9 @@ async def get_by_id(
         HTTPException: 404 if genre does not exist.
 
     Returns:
-        Genre: The genre attribute. """
+        Genre: The genre attribute.
+    """
+
     if genre := await service.get_by_id(genre_id):
         return genre.model_dump()
     raise HTTPException(status_code=404, detail="Genre not found")
@@ -103,7 +111,9 @@ async def edit_genre(
         HTTPException: 404 if genre does not exist.
 
     Returns:
-        dict: The updated genre details."""
+        dict: The updated genre details.
+    """
+
     if await service.get_by_id(genre_id=genre_id):
         new_genre = await service.edit_genre(
             genre_id=genre_id,
@@ -122,16 +132,16 @@ async def delete_genre(
 ) -> None:
     """An endpoint for deleting genres.
 
-        Args:
-            genre_id (int): Genre's id.
-            service (IGenreService, optional): The injected service dependency.
+    Args:
+        genre_id (int): Genre's id.
+        service (IGenreService, optional): The injected service dependency.
 
-        Raises:
-            HTTPException: 404 if genre does not exist.
+    Raises:
+        HTTPException: 404 if genre does not exist.
 
-        Returns:
-            dict: Empty if operation finished.
-        """
+    Returns:
+        dict: Empty if operation finished.
+    """
     if await service.get_by_id(genre_id=genre_id):
         await service.delete_genre(genre_id)
         return
