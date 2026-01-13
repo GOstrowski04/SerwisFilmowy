@@ -8,7 +8,7 @@ from pydantic import UUID5
 from filmapi.utils.password import hash_password
 from filmapi.domain.user import UserIn
 from filmapi.repositories.iuser import IUserRepository
-from filmapi.db import database, user_table
+from filmapi.db import database, user_table, follow_table
 
 
 class UserRepository(IUserRepository):
@@ -67,3 +67,43 @@ class UserRepository(IUserRepository):
         user = await database.fetch_one(query)
 
         return user
+
+    async def follow_user(self, follower_id: UUID5, followed_id: UUID5) -> bool:
+        """A method following another user
+
+        Args:
+            follower_id (UUID5): The user id.
+            followed_id (UUID5): The user id.
+
+        Returns:
+            bool: Success of the operation.
+        """
+
+        query = (
+            follow_table.insert()
+            .values(follower_id=follower_id, followed_id=followed_id)
+        )
+        await database.execute(query)
+        return True
+
+    async def unfollow_user(self, follower_id: UUID5, followed_id: UUID5) -> bool:
+        """An abstract unfollowing another user
+
+            Args:
+                follower_id (UUID5): The user id.
+                followed_id (UUID5): The user id.
+
+            Returns:
+                bool: Success of the operation.
+         """
+
+        query = (
+            follow_table.delete()
+            .where(
+                follow_table.c.follower_id == follower_id,
+                follow_table.c.followed_id == followed_id,
+            )
+        )
+        result = await database.execute(query)
+        return True
+    as

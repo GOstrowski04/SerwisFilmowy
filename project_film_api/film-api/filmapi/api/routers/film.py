@@ -21,11 +21,9 @@ async def create_film(
         service: IFilmService = Depends(Provide[Container.film_service]),
 ) -> dict:
     """An endpoint for adding new films.
-
     Args:
         film (FilmIn): The film data.
         service (IFilmService, optional): The injected service dependency.
-
     Returns:
         dict: The new film attributes."""
 

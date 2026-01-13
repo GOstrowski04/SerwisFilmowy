@@ -1,10 +1,11 @@
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Iterable, Optional
 
 from asyncpg import Record
 from pydantic import UUID5
 from sqlalchemy import select, func
+from asyncpg.exceptions import UniqueViolationError
 
 from filmapi.domain.watched_film import WatchedFilm
 from filmapi.dto.watched_filmdto import WatchedFilmDTO, ReviewDTO
@@ -99,7 +100,6 @@ class WatchedFilmRepository(IWatchedFilmRepository):
         """The method for getting an user's average film rating.
         Args:
             user_id (UUID5): User's id.
-
         Returns:
             float: User's average film rating."""
         query = (
@@ -204,16 +204,17 @@ class WatchedFilmRepository(IWatchedFilmRepository):
 
         Returns:
             Any | None: Added film."""
+
         query = (watched_films_table.insert()
                  .values(user_id=user_id,
                          film_id=film_id,
                          rating=rating,
                          review=review,
-                         review_date=datetime.now())
+                         review_date=datetime.now(timezone.utc))
                  )
+
         await database.execute(query)
-        new_watched_film = await self.get_watched_film(film_id=film_id, user_id=user_id)
-        return WatchedFilm(**dict(new_watched_film)) if new_watched_film else None
+        return await self.get_watched_film(user_id=user_id, film_id=film_id)
 
     async def update_watched(
             self,
@@ -242,7 +243,7 @@ class WatchedFilmRepository(IWatchedFilmRepository):
                         film_id=film_id,
                         rating=rating,
                         review=review,
-                        review_date=datetime.now())
+                        review_date=datetime.now(timezone.utc))
                 )
             await database.execute(query)
             return await self.get_watched_film(film_id=film_id, user_id=user_id)

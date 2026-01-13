@@ -10,6 +10,7 @@ from filmapi.api.routers.genre import router as genre_router
 from filmapi.api.routers.film import router as film_router
 from filmapi.api.routers.director import router as director_router
 from filmapi.api.routers.user import router as user_router
+from filmapi.api.routers.watched_film import router as watched_film_router
 from filmapi.container import Container
 from filmapi.db import database, init_db
 
@@ -18,7 +19,8 @@ container.wire(modules=[
     "filmapi.api.routers.genre",
     "filmapi.api.routers.film",
     "filmapi.api.routers.director",
-    "filmapi.api.routers.user"
+    "filmapi.api.routers.user",
+    "filmapi.api.routers.watched_film"
 ])
 
 
@@ -36,6 +38,7 @@ app.include_router(genre_router, prefix="/genre")
 app.include_router(director_router, prefix="/director")
 app.include_router(film_router, prefix="/film")
 app.include_router(user_router, prefix="/user")
+app.include_router(watched_film_router, prefix="/watched")
 
 @app.exception_handler(HTTPException)
 async def http_exception_handle_logging(
