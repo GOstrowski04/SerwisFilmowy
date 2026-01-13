@@ -87,13 +87,32 @@ follow_table = sqlalchemy.Table(
 watched_films_table = sqlalchemy.Table(
     "watched_films",
     metadata,
-    sqlalchemy.Column("user_id", UUID(as_uuid=True), sqlalchemy.ForeignKey("users.id", ondelete="CASCADE"),
-                      primary_key=True),
-    sqlalchemy.Column("film_id", sqlalchemy.Integer, sqlalchemy.ForeignKey("films.id", ondelete="CASCADE"),
-                      primary_key=True),
-    sqlalchemy.Column("review_date", sqlalchemy.DateTime, nullable=True),
-    sqlalchemy.Column("rating", sqlalchemy.Integer, nullable=True),
-    sqlalchemy.Column("review", sqlalchemy.Text, nullable=True),
+    sqlalchemy.Column(
+        "user_id",
+        UUID(as_uuid=True),
+        sqlalchemy.ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True
+    ),
+    sqlalchemy.Column(
+        "film_id",
+        sqlalchemy.Integer,
+        sqlalchemy.ForeignKey("films.id", ondelete="CASCADE"),
+        primary_key=True
+    ),
+    sqlalchemy.Column(
+        "review_date",
+        sqlalchemy.DateTime,
+    ),
+    sqlalchemy.Column(
+        "rating",
+        sqlalchemy.Integer,
+        nullable=True
+    ),
+    sqlalchemy.Column(
+        "review",
+        sqlalchemy.Text,
+        nullable=True
+    ),
 )
 
 db_uri = (

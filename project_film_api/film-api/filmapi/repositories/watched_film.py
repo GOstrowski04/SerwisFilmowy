@@ -12,7 +12,7 @@ from filmapi.repositories.iwatched_film import IWatchedFilmRepository
 from filmapi.db import (
     watched_films_table,
     film_table,
-    database,
+    database, user_table, follow_table,
 )
 
 class WatchedFilmRepository(IWatchedFilmRepository):
@@ -205,6 +205,78 @@ class WatchedFilmRepository(IWatchedFilmRepository):
         reviews = await database.fetch_all(query)
         return [ReviewDTO.from_record(review) for review in reviews]
 
+    async def get_user_reviews(
+            self,
+            user_id: UUID4,
+    ) -> Iterable[Any]:
+        """The method for getting a user's reviews.
+
+        Args:
+            user_id (UUID4): User's id.
+
+        Returns:
+            Iterable[Any]: User's reviews.
+        """
+
+        query = (
+            select(
+                watched_films_table.c.user_id,
+                film_table.c.title,
+                watched_films_table.c.rating,
+                watched_films_table.c.review,
+                watched_films_table.c.review_date,
+            )
+            .select_from(
+                watched_films_table
+                .join(film_table, watched_films_table.c.film_id == film_table.c.id)
+            )
+            .where(
+                watched_films_table.c.user_id == user_id,
+                watched_films_table.c.review.isnot(None),
+            )
+        )
+        reviews = await database.fetch_all(query)
+        return [ReviewDTO.from_record(review) for review in reviews]
+
+    async def get_recent_followed_reviews(
+            self,
+            user_id: UUID4,
+            limit: int,
+    ) -> Iterable[Any]:
+        """The method for getting recent reviews from users the given user follows.
+
+        Args:
+            user_id (UUID4): User's id.
+            limit (int): Number of reviews to return.
+
+        Returns:
+            Iterable[Any]: List of reviews
+        """
+
+        query = (
+            select(
+                watched_films_table.c.user_id,
+                film_table.c.title,
+                watched_films_table.c.rating,
+                watched_films_table.c.review,
+                watched_films_table.c.review_date,
+            )
+            .select_from(
+                watched_films_table
+                .join(film_table, watched_films_table.c.film_id == film_table.c.id)
+                .join(follow_table, watched_films_table.c.user_id == follow_table.c.followed_id)
+            )
+            .where(
+                follow_table.c.follower_id == user_id,
+                watched_films_table.c.review.isnot(None),
+            ).order_by(
+                watched_films_table.c.review_date.desc()
+            )
+            .limit(limit)
+        )
+        reviews = await database.fetch_all(query)
+        return [ReviewDTO.from_record(review) for review in reviews]
+
     async def add_to_watched(
             self,
             user_id: UUID4,
@@ -267,7 +339,7 @@ class WatchedFilmRepository(IWatchedFilmRepository):
                         film_id=film_id,
                         rating=rating,
                         review=review,
-                        review_date=func.now()
+                        review_date=func.now(),
                         )
                 )
             await database.execute(query)
@@ -292,7 +364,8 @@ class WatchedFilmRepository(IWatchedFilmRepository):
             query = (watched_films_table.delete()
                      .where(watched_films_table.c.film_id == film_id,
                             watched_films_table.c.user_id == user_id
-                            ))
+                            )
+                     )
             await database.execute(query)
             return True
         return False

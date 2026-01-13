@@ -8,7 +8,10 @@ from pydantic import UUID4
 
 class IWatchedFilmRepository(ABC):
     @abstractmethod
-    async def get_all_watched_films(self, user_id: UUID4) -> Iterable[Any]:
+    async def get_all_watched_films(
+            self,
+            user_id: UUID4
+    ) -> Iterable[Any]:
         """Abstract for getting all of user's watched films from the database.
 
         Args:
@@ -46,6 +49,36 @@ class IWatchedFilmRepository(ABC):
 
         Returns:
             Iterable[Any]: Film's reviews.
+        """
+
+    @abstractmethod
+    async def get_user_reviews(
+            self,
+            user_id: UUID4,
+    ) -> Iterable[Any]:
+        """Abstract for getting a user's reviews.
+
+        Args:
+            user_id (UUID4): User's id.
+
+        Returns:
+            Iterable[Any]: User's reviews.
+        """
+
+    @abstractmethod
+    async def get_recent_followed_reviews(
+            self,
+            user_id: UUID4,
+            limit: int,
+    ) -> Iterable[Any]:
+        """Abstract for getting recent reviews from users the given user follows.
+
+        Args:
+            user_id (UUID4): User's id.
+            limit (int): Number of reviews to return.
+
+        Returns:
+            Iterable[Any]: List of reviews
         """
 
     @abstractmethod

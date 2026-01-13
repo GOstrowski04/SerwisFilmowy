@@ -9,6 +9,7 @@ from pydantic import UUID4
 from filmapi.container import Container
 from filmapi.dto.watched_filmdto import WatchedFilmDTO, ReviewDTO
 from filmapi.services.ifilm import IFilmService
+from filmapi.services.iuser import IUserService
 from filmapi.services.iwatched_film import IWatchedFilmService
 from filmapi.utils import consts
 
@@ -70,65 +71,13 @@ async def add_to_watched(
     )
     return new_watched.model_dump() if new_watched else {}
 
-@router.put("/update", response_model=WatchedFilmDTO, status_code=201)
-@inject
-async def update_watched(
-        film_id: int,
-        rating: Optional[int] | None = None,
-        review: str | None = None,
-        credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-        service: IWatchedFilmService = Depends(Provide[Container.watched_film_service])
-) -> dict:
-    """The endpoint for editing a user's watched film.
-
-    Args:
-        film_id (int): Film's id.
-        rating (int): Rating given to the film (1-10).
-        review (str): Review's text.
-        credentials (HTTPAuthorizationCredentials, optional): The credentials.
-        service(IWatchedFilmService, optional): The injected service dependency
-
-    Raises:
-        HTTPException: 403 if user is not authorized.
-        HTTPException: 404 if watched film does not exist.
-
-    Returns:
-        dict: Updated watched film's attributes.
-    """
-
-    token = credentials.credentials
-    token_payload = jwt.decode(
-        token,
-        key=consts.SECRET_KEY,
-        algorithms=[consts.ALGORITHM],
-    )
-    user_uuid = token_payload.get("sub")
-
-    if not user_uuid:
-        raise HTTPException(status_code=403, detail="Unauthorized")
-
-    if await service.get_watched_film(
-            film_id=film_id,
-            user_id=user_uuid,
-    ):
-        new_film = await service.update_watched(
-            film_id=film_id,
-            user_id=user_uuid,
-            rating=rating,
-            review=review,
-        )
-        return new_film.model_dump() if new_film \
-            else {}
-
-    raise HTTPException(status_code=404, detail="Watched film not found.")
-
 @router.get("/all", response_model=Iterable[WatchedFilmDTO], status_code=200)
 @inject
-async def get_all_watched_films(
+async def get_all_own_watched_films(
         credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
         service: IWatchedFilmService = Depends(Provide[Container.watched_film_service]),
 ) -> Iterable[WatchedFilmDTO]:
-    """The endpoint for getting all of user's watched films from the database.
+    """The endpoint for getting all of authorized user's watched films from the database.
 
     Args:
         credentials (HTTPAuthorizationCredentials, optional): The credentials.
@@ -153,6 +102,69 @@ async def get_all_watched_films(
         raise HTTPException(status_code=403, detail="Unauthorized")
 
     watched_films = await service.get_all_watched_films(user_id=user_uuid)
+    return [watched_film.model_dump() for watched_film in watched_films]
+
+@router.get("/followed", response_model=Iterable[ReviewDTO], status_code=200)
+@inject
+async def get_recent_followed_reviews(
+        limit: int,
+        service: IWatchedFilmService = Depends(Provide[Container.watched_film_service]),
+        credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> Iterable[ReviewDTO]:
+    """The endpoint for getting recent reviews from users the given user follows.
+
+    Args:
+        limit (int): The number of recent reviews to get.
+        service(IWatchedFilmService, optional): The injected service dependency.
+        credentials(HTTPAuthorizationCredentials, optional): The credentials.
+
+    Raises:
+        HTTPException: 403 if unauthorized.
+        HTTPException: 400 if limit lower than 1.
+
+    Returns:
+        Iterable[ReviewDTO]: List of reviews.
+    """
+
+    token = credentials.credentials
+    token_payload = jwt.decode(
+        token,
+        key=consts.SECRET_KEY,
+        algorithms=[consts.ALGORITHM],
+    )
+    user_uuid = token_payload.get("sub")
+
+    if not user_uuid:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if limit <= 0:
+        raise HTTPException(status_code=400, detail="Limit can't be lower than 1")
+    return await service.get_recent_followed_reviews(user_id=user_uuid, limit=limit)
+
+@router.get("/{user_id}/all", response_model=Iterable[WatchedFilmDTO], status_code=200)
+@inject
+async def get_all_watched_films(
+        user_id: UUID4,
+        service: IWatchedFilmService = Depends(Provide[Container.watched_film_service]),
+        user_service: IUserService = Depends(Provide[Container.user_service]),
+) -> Iterable[WatchedFilmDTO]:
+    """The endpoint for getting all of authorized user's watched films from the database.
+
+    Args:
+        user_id (UUID4): User's id.
+        service(IWatchedFilmService, optional): The injected service dependency
+        user_service(IUserService, optional): The injected service dependency.
+
+    Raises:
+        HTTPException: 404 if user does not exist.
+
+    Returns:
+        Iterable[WatchedFilmDTO]: Watched films' attributes.
+    """
+
+    if not await user_service.get_by_uuid(uuid=user_id):
+        raise HTTPException(status_code=404, detail="User not found")
+
+    watched_films = await service.get_all_watched_films(user_id=user_id)
     return [watched_film.model_dump() for watched_film in watched_films]
 
 @router.get("/{film_id}", response_model=WatchedFilmDTO, status_code=200)
@@ -190,6 +202,56 @@ async def get_watched_film(
     if watched_film := await service.get_watched_film(user_id=user_uuid, film_id=film_id):
         return watched_film.model_dump()
     raise HTTPException(status_code=404, detail="Watched film not found.")
+
+
+@router.get("/film/{film_id}/reviews", response_model=Iterable[ReviewDTO], status_code=200)
+@inject
+async def get_film_reviews(
+        film_id: int,
+        service: IWatchedFilmService = Depends(Provide[Container.watched_film_service]),
+) -> Iterable[ReviewDTO]:
+    """The endpoint for getting the film's reviews.
+
+    Args:
+        film_id (int): The id of the film.
+        service(IWatchedFilmService, optional): The injected service dependency.
+
+    Raises:
+        HTTPException: 404 if film does not exist.
+
+    Returns:
+        Iterable[ReviewDTO]: The film's reviews.
+    """
+
+    if reviews := await service.get_film_reviews(film_id=film_id):
+        return reviews
+    raise HTTPException(status_code=404, detail="Film or reviews not found.")
+
+@router.get("/user/{user_id}/reviews", response_model=Iterable[ReviewDTO], status_code=200)
+@inject
+async def get_user_reviews(
+        user_id: UUID4,
+        service: IWatchedFilmService = Depends(Provide[Container.watched_film_service]),
+        user_service: IUserService = Depends(Provide[Container.user_service]),
+) -> Iterable[ReviewDTO]:
+    """The endpoint for getting user's reviews.
+
+    Args:
+        user_id (UUID4): User's id.
+        service(IWatchedFilmService, optional): The injected service dependency.
+        user_service(IUserService, optional): The injected service dependency.
+
+    Raises:
+        HTTPException: 404 if user does not exist.
+
+    Returns:
+        Iterable[ReviewDTO]: User's reviews.
+    """
+
+    if not await user_service.get_by_uuid(uuid=user_id):
+        raise HTTPException(status_code=404, detail="User not found")
+    return await service.get_user_reviews(user_id=user_id)
+
 
 @router.get("/film/{film_id}/avgrating", response_model=float, status_code=200)
 @inject
@@ -277,25 +339,86 @@ async def get_user_watched_number(
     num_ratings = await service.get_user_watched_number(user_id=user_id)
     return num_ratings
 
-@router.get("/film/{film_id}/reviews", response_model=Iterable[ReviewDTO], status_code=200)
+@router.put("/update", response_model=WatchedFilmDTO, status_code=201)
 @inject
-async def get_film_reviews(
+async def update_watched(
+        film_id: int,
+        rating: Optional[int] | None = None,
+        review: str | None = None,
+        credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+        service: IWatchedFilmService = Depends(Provide[Container.watched_film_service])
+) -> dict:
+    """The endpoint for editing a user's watched film.
+
+    Args:
+        film_id (int): Film's id.
+        rating (int): Rating given to the film (1-10).
+        review (str): Review's text.
+        credentials (HTTPAuthorizationCredentials, optional): The credentials.
+        service(IWatchedFilmService, optional): The injected service dependency
+
+    Raises:
+        HTTPException: 403 if user is not authorized.
+        HTTPException: 404 if watched film does not exist.
+
+    Returns:
+        dict: Updated watched film's attributes.
+    """
+
+    token = credentials.credentials
+    token_payload = jwt.decode(
+        token,
+        key=consts.SECRET_KEY,
+        algorithms=[consts.ALGORITHM],
+    )
+    user_uuid = token_payload.get("sub")
+
+    if not user_uuid:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    if await service.get_watched_film(
+            film_id=film_id,
+            user_id=user_uuid,
+    ):
+        new_film = await service.update_watched(
+            film_id=film_id,
+            user_id=user_uuid,
+            rating=rating,
+            review=review,
+        )
+        return new_film.model_dump() if new_film \
+            else {}
+
+    raise HTTPException(status_code=404, detail="Watched film not found.")
+
+@router.delete("/film/{film_id}/", status_code=204)
+@inject
+async def delete_watched(
         film_id: int,
         service: IWatchedFilmService = Depends(Provide[Container.watched_film_service]),
-) -> Iterable[ReviewDTO]:
-    """The endpoint for getting the film's reviews.
+        credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> None:
+    """The endpoint for deleting watched film from user's list.
 
     Args:
         film_id (int): The id of the film.
         service(IWatchedFilmService, optional): The injected service dependency.
+        credentials(HTTPAuthorizationCredentials, optional): The injected dependency.
 
     Raises:
         HTTPException: 404 if film does not exist.
-
-    Returns:
-        Iterable[ReviewDTO]: The film's reviews.
     """
 
-    if reviews := await service.get_film_reviews(film_id=film_id):
-        return [review.model_dump() for review in reviews]
-    raise HTTPException(status_code=404, detail="Film or reviews not found.")
+    token = credentials.credentials
+    token_payload = jwt.decode(
+        token,
+        key=consts.SECRET_KEY,
+        algorithms=[consts.ALGORITHM],
+    )
+    user_uuid = token_payload.get("sub")
+    if not user_uuid:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if await service.get_watched_film(user_id=user_uuid, film_id=film_id):
+        await service.delete_watched(user_id=user_uuid, film_id=film_id)
+        return
+    raise HTTPException(status_code=404, detail="Film not found.")

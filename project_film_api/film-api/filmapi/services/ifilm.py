@@ -91,6 +91,30 @@ class IFilmService(ABC):
         """
 
     @abstractmethod
+    async def get_film_genre(self, film_id: int, genre_id: int) -> bool:
+        """The abstract for checking if a film has this genre.
+
+        Args:
+            film_id (int): A film's id.
+            genre_id (int): A genre's id.
+
+        Returns:
+            bool: Whether the film has this genre.
+        """
+
+    @abstractmethod
+    async def delete_film_genre(self, film_id: int, genre_id: int) -> bool:
+        """Abstract for deleting a film's genre.
+
+        Args:
+            film_id (int): A film's id.
+            genre_id (int): A genre's id.
+
+        Returns:
+            bool: Success of an operation.
+        """
+
+    @abstractmethod
     async def delete_film(self, film_id: int) -> bool:
         """The abstract for deleting a film from the repository.
 

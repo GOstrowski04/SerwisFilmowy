@@ -1,6 +1,6 @@
 """A module containing film endpoints."""
 
-from typing import Iterable
+from typing import Iterable, Any
 
 from dependency_injector.wiring import inject, Provide
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -10,6 +10,7 @@ from filmapi.domain.film import Film, FilmIn
 from filmapi.domain.genre import Genre
 from filmapi.dto.filmdto import FilmDTO
 from filmapi.services.ifilm import IFilmService
+from filmapi.services.igenre import IGenreService
 
 router = APIRouter()
 
@@ -34,33 +35,38 @@ async def create_film(
 
     return new_film.model_dump() if new_film else {}
 
-@router.post("/addgenre", response_model=dict, status_code = 201)
+@router.post("/addgenre", response_model=Iterable[Any], status_code = 201)
 @inject
 async def add_film_genre(
         film_id: int,
         genre_id: int,
         service: IFilmService = Depends(Provide[Container.film_service]),
-) -> dict:
+        genre_service: IGenreService = Depends(Provide[Container.genre_service]),
+) -> Iterable[Any]:
     """An endpoint for adding a genre to a film.
 
     Args:
         film_id (int): A film's id.
         genre_id (int): A genre's id.
         service (IFilmService, optional): The injected service dependency.
+        genre_service (IGenreService, optional): The injected genre dependency.
 
     Raises:
         HTTPException: 404 if film or genre do not exist.
 
     Returns:
-        dict: The film's genres.
+        Iterable[Any]: The film's genres.
     """
+    if not await genre_service.get_by_id(genre_id=genre_id):
+        raise HTTPException(status_code=404, detail="Genre not found")
+    if not await service.get_film_by_id(film_id=film_id):
+        raise HTTPException(status_code=404, detail="Film not found")
 
-    if await service.get_film_by_id(film_id=film_id):
-        genres = await service.add_film_genre(film_id, genre_id)
-        if genres is not None:
-            return {"genres": [dict(genre) for genre in genres]}
-
-    raise HTTPException(status_code=404, detail="Film or genre not found")
+    new_genres = await service.add_film_genre(
+        film_id=film_id,
+        genre_id=genre_id,
+    )
+    return new_genres
 
 
 @router.get("/all", response_model=Iterable[FilmDTO], status_code=200)
@@ -184,6 +190,30 @@ async def update_film(
             else {}
 
     raise HTTPException(status_code=404, detail="Film not found.")
+
+@router.delete("/{film_id}/{genre_id}", status_code=204)
+@inject
+async def delete_film_genre(
+        film_id: int,
+        genre_id: int,
+        service: IFilmService = Depends(Provide[Container.film_service]),
+) -> None:
+    """The endpoint for deleting a film's genre.
+
+    Args:
+        film_id (int): A film's id.
+        genre_id (int): A genre's id.
+        service (IFilmService, optional): The injected service dependency.
+
+    Raises:
+        HTTPException: 404 if film's genre does not exist.
+    """
+    if await service.get_film_genre(film_id=film_id, genre_id=genre_id):
+        await service.delete_film_genre(film_id=film_id, genre_id=genre_id)
+
+        return
+
+    raise HTTPException(status_code=404, detail="Film's genre not found")
 
 @router.delete("/{film_id}", status_code=204)
 @inject

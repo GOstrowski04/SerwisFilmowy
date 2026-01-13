@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from asyncpg import Record
-from pydantic import BaseModel, UUID5, ConfigDict
+from pydantic import BaseModel, UUID4, ConfigDict
 
 
 class WatchedFilmDTO(BaseModel):
@@ -31,7 +31,7 @@ class WatchedFilmDTO(BaseModel):
         )
 
 class ReviewDTO(BaseModel):
-    user_id: UUID5
+    user_id: UUID4
     title: str
     rating: int
     review: str

@@ -98,6 +98,32 @@ class FilmService(IFilmService):
 
         return await self._repository.get_film_genres(film_id)
 
+    async def get_film_genre(self, film_id: int, genre_id: int) -> bool:
+        """The abstract for checking if a film has this genre.
+
+        Args:
+            film_id (int): A film's id.
+            genre_id (int): A genre's id.
+
+        Returns:
+            bool: Whether the film has this genre.
+        """
+
+        return await self._repository.get_film_genre(film_id, genre_id)
+
+    async def delete_film_genre(self, film_id: int, genre_id: int) -> bool:
+        """Abstract for deleting a film's genre.
+
+        Args:
+            film_id (int): A film's id.
+            genre_id (int): A genre's id.
+
+        Returns:
+            bool: Success of an operation.
+        """
+
+        return await self._repository.delete_film_genre(film_id, genre_id)
+
     async def update_film(self, film_id: int, data: FilmIn) -> Film | None:
         """The abstract for updating a film in the repository.
 

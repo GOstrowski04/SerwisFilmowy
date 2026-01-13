@@ -31,7 +31,7 @@ class FilmRepository(IFilmRepository):
             )
             .select_from(
                 film_table
-                .join(director_table, film_table.c.director_id == director_table.c.id)
+                .outerjoin(director_table, film_table.c.director_id == director_table.c.id)
             )
         )
         films = await database.fetch_all(query)
@@ -102,7 +102,7 @@ class FilmRepository(IFilmRepository):
                 director_table.c.birth_year.label("birth_year"),
             ).select_from(
                 film_table
-                .join(director_table, film_table.c.director_id == director_table.c.id)
+                .outerjoin(director_table, film_table.c.director_id == director_table.c.id)
             ).where(
             film_table.c.id == film_id
             )
@@ -121,17 +121,9 @@ class FilmRepository(IFilmRepository):
             Iterable[Any]: List of a film's genres.
         """
 
-        test = await database.fetch_one(
-            select(film_genre_table).where(
-                film_genre_table.c.film_id == film_id,
-                film_genre_table.c.genre_id == genre_id,
-            )
-        )
-        if test:
-            return await self.get_film_genres(film_id)
-
-        query = film_genre_table.insert().values(film_id=film_id, genre_id=genre_id)
-        await database.execute(query)
+        if not await self.get_film_genre(film_id, genre_id):
+            query = film_genre_table.insert().values(film_id=film_id, genre_id=genre_id)
+            await database.execute(query)
         return await self.get_film_genres(film_id)
 
     async def get_film_genres(self, film_id: int) -> Iterable[Any] | None:
@@ -159,6 +151,51 @@ class FilmRepository(IFilmRepository):
         genres = await database.fetch_all(query)
         return [Genre(**dict(genre)) for genre in genres]
 
+    async def get_film_genre(self, film_id: int, genre_id: int) -> bool:
+        """The method for checking if a film has this genre.
+
+        Args:
+            film_id (int): A film's id.
+            genre_id (int): A genre's id.
+
+        Returns:
+            bool: Whether the film has this genre.
+        """
+
+        query = (
+            select(
+                film_genre_table,
+            ).where(
+                film_genre_table.c.film_id == film_id,
+                film_genre_table.c.genre_id == genre_id,
+            )
+        )
+        genre = await database.fetch_one(query)
+        return genre is not None
+
+    async def delete_film_genre(self, film_id: int, genre_id: int) -> bool:
+        """Method for deleting a film's genre.
+
+        Args:
+            film_id (int): A film's id.
+            genre_id (int): A genre's id.
+
+        Returns:
+            bool: Success of an operation.
+        """
+
+        if await self.get_film_genre(film_id=film_id, genre_id=genre_id):
+            query = (
+                film_genre_table.delete()
+                .where(
+                    film_genre_table.c.film_id == film_id,
+                    film_genre_table.c.genre_id == genre_id,
+                )
+            )
+            await database.execute(query)
+            return True
+        return False
+
     async def create_film(self, data: FilmIn) -> Any | None:
         """The method for creating a film entry in database.
 
@@ -168,9 +205,11 @@ class FilmRepository(IFilmRepository):
         Returns:
               Any | None: Newly created film.
         """
-
+        values = data.model_dump()
+        if values.get("director_id") == 0:
+            values["director_id"] = None
         query = (film_table.insert()
-                 .values(**data.model_dump()))
+                 .values(**values))
         new_film_id = await database.execute(query)
         new_film = await self._get_by_id(new_film_id)
         return Film(**dict(new_film)) if new_film else None

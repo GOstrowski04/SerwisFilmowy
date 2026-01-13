@@ -174,7 +174,6 @@ class UserRepository(IUserRepository):
                 follow_table.c.follower_id == follower_id,
                 follow_table.c.followed_id == followed_id,
             )
-            .limit(1)
         )
         follower = await database.fetch_one(query)
         return follower is not None

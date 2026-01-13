@@ -65,6 +65,38 @@ class WatchedFilmService(IWatchedFilmService):
 
         return await self._repository.get_film_reviews(film_id)
 
+    async def get_user_reviews(
+            self,
+            user_id: UUID4,
+    ) -> Iterable[Any]:
+        """Abstract for getting a user's reviews.
+
+        Args:
+            user_id (UUID4): User's id.
+
+        Returns:
+            Iterable[Any]: User's reviews.
+        """
+
+        return await self._repository.get_user_reviews(user_id)
+
+    async def get_recent_followed_reviews(
+            self,
+            user_id: UUID4,
+            limit: int,
+    ) -> Iterable[Any]:
+        """Abstract for getting recent reviews from users the given user follows.
+
+        Args:
+            user_id (UUID4): User's id.
+            limit (int): Number of reviews to return.
+
+        Returns:
+            Iterable[Any]: List of reviews
+        """
+
+        return await self._repository.get_recent_followed_reviews(user_id, limit)
+
     async def get_film_average_rating(
             self,
             film_id: int,

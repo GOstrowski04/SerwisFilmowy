@@ -47,6 +47,36 @@ class IWatchedFilmService(ABC):
         """
 
     @abstractmethod
+    async def get_user_reviews(
+            self,
+            user_id: UUID4,
+    ) -> Iterable[Any]:
+        """Abstract for getting a user's reviews.
+
+        Args:
+            user_id (UUID4): User's id.
+
+        Returns:
+            Iterable[Any]: User's reviews.
+        """
+
+    @abstractmethod
+    async def get_recent_followed_reviews(
+            self,
+            user_id: UUID4,
+            limit: int,
+    ) -> Iterable[Any]:
+        """Abstract for getting recent reviews from users the given user follows.
+
+        Args:
+            user_id (UUID4): User's id.
+            limit (int): Number of reviews to return.
+
+        Returns:
+            Iterable[Any]: List of reviews
+        """
+
+    @abstractmethod
     async def get_film_average_rating(
             self,
             film_id: int,

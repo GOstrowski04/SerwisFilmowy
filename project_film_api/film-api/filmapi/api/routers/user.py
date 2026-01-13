@@ -108,44 +108,6 @@ async def follow_user(
         raise HTTPException(status_code=404, detail="The user you're trying to follow does not exist.")
     return await service.follow_user(follower_id=follower_id, followed_id=followed_id)
 
-@router.delete("/unfollow", response_model=bool, status_code=200)
-@inject
-async def unfollow_user(
-        followed_id: UUID4,
-        credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-        service: IUserService = Depends(Provide[Container.user_service]),
-) -> bool:
-    """An endpoint for unfollowing a user.
-
-    Args:
-        followed_id (UUID4): The id of the followed user.
-        credentials (HTTPAuthorizationCredentials, optional): The credentials.
-        service (IUserService, optional): The injected user service.
-
-    Raises:
-        HTTPException: 403 if user is not authorized.
-        HTTPException: 400 if another user is not followed or the user is trying to unfollow themselves.
-
-    Returns:
-        bool: Success of the operation.
-    """
-
-    token = credentials.credentials
-    token_payload = jwt.decode(
-        token,
-        key=consts.SECRET_KEY,
-        algorithms=[consts.ALGORITHM],
-    )
-    follower_id = token_payload.get("sub")
-
-    if not follower_id:
-        raise HTTPException(status_code=403, detail="Unauthorized")
-    if follower_id == followed_id:
-        raise HTTPException(status_code=400, detail="Can't follow yourself")
-    if not await service.is_following(follower_id=follower_id, followed_id=followed_id):
-        raise HTTPException(status_code=400, detail="You aren't following given user.")
-    return await service.unfollow_user(follower_id=follower_id, followed_id=followed_id)
-
 @router.get("/followers", response_model=Iterable[UserDTO], status_code=200)
 @inject
 async def get_followers(
@@ -212,3 +174,41 @@ async def is_following(
     if not await service.get_by_uuid(uuid=follower_id) or not await service.get_by_uuid(uuid=followed_id):
         raise HTTPException(status_code=404, detail="User not found")
     return await service.is_following(follower_id=follower_id, followed_id=followed_id)
+
+@router.delete("/unfollow", response_model=bool, status_code=200)
+@inject
+async def unfollow_user(
+        followed_id: UUID4,
+        credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+        service: IUserService = Depends(Provide[Container.user_service]),
+) -> bool:
+    """An endpoint for unfollowing a user.
+
+    Args:
+        followed_id (UUID4): The id of the followed user.
+        credentials (HTTPAuthorizationCredentials, optional): The credentials.
+        service (IUserService, optional): The injected user service.
+
+    Raises:
+        HTTPException: 403 if user is not authorized.
+        HTTPException: 400 if another user is not followed or the user is trying to unfollow themselves.
+
+    Returns:
+        bool: Success of the operation.
+    """
+
+    token = credentials.credentials
+    token_payload = jwt.decode(
+        token,
+        key=consts.SECRET_KEY,
+        algorithms=[consts.ALGORITHM],
+    )
+    follower_id = token_payload.get("sub")
+
+    if not follower_id:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if follower_id == followed_id:
+        raise HTTPException(status_code=400, detail="Can't follow yourself")
+    if not await service.is_following(follower_id=follower_id, followed_id=followed_id):
+        raise HTTPException(status_code=400, detail="You aren't following given user.")
+    return await service.unfollow_user(follower_id=follower_id, followed_id=followed_id)
