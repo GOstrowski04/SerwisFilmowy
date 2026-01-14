@@ -205,11 +205,8 @@ class FilmRepository(IFilmRepository):
         Returns:
               Any | None: Newly created film.
         """
-        values = data.model_dump()
-        if values.get("director_id") == 0:
-            values["director_id"] = None
         query = (film_table.insert()
-                 .values(**values))
+                 .values(**data.model_dump()))
         new_film_id = await database.execute(query)
         new_film = await self._get_by_id(new_film_id)
         return Film(**dict(new_film)) if new_film else None

@@ -9,6 +9,7 @@ from filmapi.container import Container
 from filmapi.domain.film import Film, FilmIn
 from filmapi.domain.genre import Genre
 from filmapi.dto.filmdto import FilmDTO
+from filmapi.services.idirector import IDirectorService
 from filmapi.services.ifilm import IFilmService
 from filmapi.services.igenre import IGenreService
 
@@ -20,17 +21,24 @@ router = APIRouter()
 async def create_film(
         film: FilmIn,
         service: IFilmService = Depends(Provide[Container.film_service]),
+        director_service: IDirectorService = Depends(Provide[Container.director_service]),
 ) -> dict:
     """An endpoint for adding new films.
 
     Args:
         film (FilmIn): The film data.
         service (IFilmService, optional): The injected service dependency.
+        director_service (IDirectorService, optional): The injected service dependency.
+
+    Raises:
+        HTTPException: 404 if given director does not exist.
 
     Returns:
         dict: The new film attributes.
     """
-
+    if film.director_id is not None:
+        if not await director_service.get_director_by_id(film.director_id):
+            raise HTTPException(status_code=404, detail="Director with given ID does not exist.")
     new_film = await service.create_film(film)
 
     return new_film.model_dump() if new_film else {}

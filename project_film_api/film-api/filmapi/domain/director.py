@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 class DirectorIn(BaseModel):
     name: str
-    birth_year: Optional[int]
+    birth_year: Optional[int] = None
 
 
 class Director(DirectorIn):

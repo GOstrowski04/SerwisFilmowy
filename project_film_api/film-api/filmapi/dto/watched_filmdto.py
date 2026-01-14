@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from asyncpg import Record
 from pydantic import BaseModel, UUID4, ConfigDict
@@ -7,7 +8,7 @@ from pydantic import BaseModel, UUID4, ConfigDict
 class WatchedFilmDTO(BaseModel):
     film_id: int
     title: str
-    rating: int | None
+    rating: Optional[int] = None
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -33,7 +34,7 @@ class WatchedFilmDTO(BaseModel):
 class ReviewDTO(BaseModel):
     user_id: UUID4
     title: str
-    rating: int
+    rating: Optional[int] = None
     review: str
     review_date: datetime
 

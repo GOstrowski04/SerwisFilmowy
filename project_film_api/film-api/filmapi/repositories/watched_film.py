@@ -4,15 +4,14 @@ from typing import Any, Iterable, Optional
 from asyncpg import Record
 from pydantic import UUID4
 from sqlalchemy import select, func
-from asyncpg.exceptions import UniqueViolationError
 
-from filmapi.domain.watched_film import WatchedFilm
+from filmapi.domain.watched_film import WatchedFilm, WatchedFilmIn
 from filmapi.dto.watched_filmdto import WatchedFilmDTO, ReviewDTO
 from filmapi.repositories.iwatched_film import IWatchedFilmRepository
 from filmapi.db import (
     watched_films_table,
     film_table,
-    database, user_table, follow_table,
+    database, follow_table,
 )
 
 class WatchedFilmRepository(IWatchedFilmRepository):
@@ -281,16 +280,14 @@ class WatchedFilmRepository(IWatchedFilmRepository):
             self,
             user_id: UUID4,
             film_id: int,
-            rating: Optional[int] | None = None,
-            review: Optional[str] | None = None,
+            data: WatchedFilmIn,
     ) -> Any | None:
         """Abstract for adding a film to an user's watched list.
 
         Args:
             user_id (UUID4): User's id.
             film_id (int): Added film's id.
-            rating (int): Rating given to the film (1-10).
-            review (str): Review's text.
+            data (WatchedFilmIn): Attributes of the watched film.
 
         Returns:
             Any | None: Added film.
@@ -299,8 +296,8 @@ class WatchedFilmRepository(IWatchedFilmRepository):
         query = (watched_films_table.insert()
                  .values(user_id=user_id,
                          film_id=film_id,
-                         rating=rating,
-                         review=review,
+                         rating=data.rating,
+                         review=data.review,
                          review_date=func.now(),
                          )
 
@@ -313,16 +310,14 @@ class WatchedFilmRepository(IWatchedFilmRepository):
             self,
             user_id: UUID4,
             film_id: int,
-            rating: int | None = None,
-            review: str | None = None,
+            data: WatchedFilmIn,
     ) -> Any | None:
         """Abstract for editing a user's watched film.
 
         Args:
             user_id (UUID4): User's id.
             film_id (int): Film's id.
-            rating (int): Rating given to the film (1-10).
-            review (str): Review's text.
+            data (WatchedFilmIn): Attributes of the watched film.
 
         Returns:
             Any | None: Updated film.
@@ -337,8 +332,8 @@ class WatchedFilmRepository(IWatchedFilmRepository):
                 )
                 .values(user_id=user_id,
                         film_id=film_id,
-                        rating=rating,
-                        review=review,
+                        rating=data.rating,
+                        review=data.review,
                         review_date=func.now(),
                         )
                 )

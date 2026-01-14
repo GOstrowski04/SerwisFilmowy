@@ -3,7 +3,7 @@ from typing import Any, Iterable
 
 from pydantic import UUID4
 
-
+from filmapi.domain.watched_film import WatchedFilmIn
 
 
 class IWatchedFilmRepository(ABC):
@@ -142,16 +142,14 @@ class IWatchedFilmRepository(ABC):
             self,
             user_id: UUID4,
             film_id: int,
-            rating: int | None = None,
-            review: str | None = None,
+            data: WatchedFilmIn
             ) -> Any | None:
         """Abstract for adding a film to an user's watched list.
 
         Args:
             user_id (UUID4): User's id.
             film_id (int): Added film's id.
-            rating (int): Rating given to the film (1-10).
-            review (str): Review's text.
+            data (WatchedFilmIn): Attributes of the watched film.
 
         Returns:
             Any | None: Added film.
@@ -162,16 +160,14 @@ class IWatchedFilmRepository(ABC):
             self,
             user_id: UUID4,
             film_id: int,
-            rating: int | None = None,
-            review: str | None = None,
+            data: WatchedFilmIn
             ) -> Any | None:
         """Abstract for editing a user's watched film.
 
         Args:
             user_id (UUID4): User's id.
             film_id (int): Film's id.
-            rating (int): Rating given to the film (1-10).
-            review (str): Review's text.
+            data (WatchedFilmIn): Attributes of the watched film.
 
         Returns:
             Any | None: Added film.

@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import UUID4
 
 from filmapi.container import Container
+from filmapi.domain.watched_film import WatchedFilmIn
 from filmapi.dto.watched_filmdto import WatchedFilmDTO, ReviewDTO
 from filmapi.services.ifilm import IFilmService
 from filmapi.services.iuser import IUserService
@@ -21,8 +22,7 @@ router = APIRouter()
 @inject
 async def add_to_watched(
             film_id: int,
-            rating: Optional[int] | None = None,
-            review: Optional[str] | None = None,
+            data: WatchedFilmIn,
             credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
             service: IWatchedFilmService = Depends(Provide[Container.watched_film_service]),
             film_service: IFilmService = Depends(Provide[Container.film_service])
@@ -31,8 +31,7 @@ async def add_to_watched(
 
         Args:
             film_id (int): Added film's id.
-            rating (int): Rating given to the film (1-10).
-            review (str): Review's text.
+            data (WatchedFilmIn): Attributes of the watched film.
             credentials (HTTPAuthorizationCredentials, optional): The credentials.
             service (IWatchedFilmService, optional): The injected service dependency.
             film_service (IFilmService, optional): The injected service dependency.
@@ -59,15 +58,14 @@ async def add_to_watched(
         raise HTTPException(status_code=404, detail="Film does not exist.")
     if await service.get_watched_film(user_id=user_uuid, film_id=film_id):
         raise HTTPException(status_code=409, detail="Film already added to watched list")
-    if rating is not None:
-        if rating < 0 or rating > 10:
+    if data.rating is not None:
+        if data.rating < 0 or data.rating > 10:
             raise HTTPException(status_code=409, detail="Rating must be between 0 and 10")
 
     new_watched = await service.add_to_watched(
         user_id=user_uuid,
         film_id=film_id,
-        rating=rating,
-        review=review,
+        data=data,
     )
     return new_watched.model_dump() if new_watched else {}
 
@@ -209,23 +207,23 @@ async def get_watched_film(
 async def get_film_reviews(
         film_id: int,
         service: IWatchedFilmService = Depends(Provide[Container.watched_film_service]),
+        film_service: IFilmService = Depends(Provide[Container.film_service]),
 ) -> Iterable[ReviewDTO]:
     """The endpoint for getting the film's reviews.
 
     Args:
         film_id (int): The id of the film.
         service(IWatchedFilmService, optional): The injected service dependency.
-
+        film_service (IFilmService, optional): The injected service dependency.
     Raises:
         HTTPException: 404 if film does not exist.
 
     Returns:
         Iterable[ReviewDTO]: The film's reviews.
     """
-
-    if reviews := await service.get_film_reviews(film_id=film_id):
-        return reviews
-    raise HTTPException(status_code=404, detail="Film or reviews not found.")
+    if not await film_service.get_film_by_id(film_id=film_id):
+        raise HTTPException(status_code=404, detail="Film does not exist")
+    return await service.get_film_reviews(film_id=film_id)
 
 @router.get("/user/{user_id}/reviews", response_model=Iterable[ReviewDTO], status_code=200)
 @inject
@@ -343,8 +341,7 @@ async def get_user_watched_number(
 @inject
 async def update_watched(
         film_id: int,
-        rating: Optional[int] | None = None,
-        review: str | None = None,
+        data: WatchedFilmIn,
         credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
         service: IWatchedFilmService = Depends(Provide[Container.watched_film_service])
 ) -> dict:
@@ -352,8 +349,7 @@ async def update_watched(
 
     Args:
         film_id (int): Film's id.
-        rating (int): Rating given to the film (1-10).
-        review (str): Review's text.
+        data (WatchedFilmIn): Attributes of the watched film.
         credentials (HTTPAuthorizationCredentials, optional): The credentials.
         service(IWatchedFilmService, optional): The injected service dependency
 
@@ -383,8 +379,7 @@ async def update_watched(
         new_film = await service.update_watched(
             film_id=film_id,
             user_id=user_uuid,
-            rating=rating,
-            review=review,
+            data=data,
         )
         return new_film.model_dump() if new_film \
             else {}
