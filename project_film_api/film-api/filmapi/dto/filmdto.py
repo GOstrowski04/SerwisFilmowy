@@ -12,7 +12,6 @@ class FilmDTO(BaseModel):
     title: str
     description: Optional[str]
     release_year: Optional[int]
-    director: DirectorDTO
 
 
     model_config = ConfigDict(
@@ -37,9 +36,4 @@ class FilmDTO(BaseModel):
             title=record_dict.get("title"),
             description=record_dict.get("description"),
             release_year=record_dict.get("release_year"),
-            director=DirectorDTO(
-                director_id=record_dict.get("director_id"),
-                director_name=record_dict.get("director_name"),
-                birth_year=record_dict.get("birth_year"),
-            ),
         )

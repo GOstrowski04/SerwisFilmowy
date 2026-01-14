@@ -94,7 +94,7 @@ async def get_all_films(
     films = await service.get_all_films()
     return films
 
-@router.get("", response_model=Iterable[FilmDTO], status_code=200)
+@router.get("/search", response_model=Iterable[FilmDTO], status_code=200)
 @inject
 async def search_films(
         title: str | None = None,
